@@ -14,7 +14,7 @@ class Sqlite extends Base {
     super(caller, opts, ctx)
 
     this._hasConf = false
-    this._workers = new WeakSet()
+    this._workers = new Set()
     this._queue = []
 
     this.name = 'db-sqlite'
@@ -167,6 +167,7 @@ class Sqlite extends Base {
         })
         .on('exit', (code) => {
           clearImmediate(timer)
+          this._workers.delete(worker)
 
           if (job) {
             job.reject(error || new Error('worker died'))
@@ -192,6 +193,8 @@ class Sqlite extends Base {
           for (const worker of this._workers) {
             worker.terminate()
           }
+
+          this._workers.clear()
         } catch (e) {
           console.error(e)
         }
