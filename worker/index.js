@@ -1,11 +1,29 @@
 'use strict'
 
-const { parentPort } = require('worker_threads')
+const { workerData, parentPort } = require('worker_threads')
 const Database = require('better-sqlite3')
 
 const DB_WORKER_ACTIONS = require('./db-worker-actions.const')
 
-let db
+const _connect = (args) => {
+  const {
+    dbPath = './sqlite-db.db',
+    readonly,
+    fileMustExist,
+    timeout = 5000,
+    verbose
+  } = args
+
+  return new Database(
+    dbPath,
+    {
+      readonly,
+      fileMustExist,
+      timeout,
+      verbose: verbose ? console.log : null
+    }
+  )
+}
 
 const _execute = (args) => {
   const { action, sql, params } = args
@@ -15,16 +33,18 @@ const _execute = (args) => {
   }
 }
 
+const db = _connect(workerData)
+
+process.on('exit', () => db.close())
+process.on('SIGHUP', () => process.exit(128 + 1))
+process.on('SIGINT', () => process.exit(128 + 2))
+process.on('SIGTERM', () => process.exit(128 + 15))
+
 parentPort.on('message', (args) => {
-  const { action, params } = args
+  const { action } = args
 
   if (!action) {
     throw new Error('ERR_ACTION_HAS_NOT_FOUND')
-  }
-  if (action === DB_WORKER_ACTIONS.INIT) {
-    db = new Database(...params)
-
-    parentPort.postMessage({ isDbReady: true })
   }
   if (!(db instanceof Database)) {
     throw new Error('ERR_DB_HAS_NOT_INITIALIZED')

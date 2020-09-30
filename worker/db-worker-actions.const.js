@@ -1,8 +1,5 @@
 'use strict'
 
-const DB_WORKER_ACTIONS = {
-  INIT: 'INIT',
+module.exports = {
   ALL: 'ALL'
 }
-
-module.exports = DB_WORKER_ACTIONS

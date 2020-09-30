@@ -9,38 +9,47 @@ const os = require('os')
 const Database = require('better-sqlite3')
 const Base = require('bfx-facs-base')
 
-const DB_WORKER_ACTIONS = require(
-  './worker/db-worker-actions.const'
-)
-
 class Sqlite extends Base {
   constructor (caller, opts, ctx) {
     super(caller, opts, ctx)
 
-    this.name = 'db-sqlite'
     this._hasConf = false
+    this._workers = new WeakSet()
     this._queue = []
 
-    const cal = this.caller
+    this.name = 'db-sqlite'
+    this.opts = this._getOpts()
 
+    this.init()
+  }
+
+  _getOpts () {
     const {
+      workerPathAbsolute,
       dbPathAbsolute,
       label
     } = this.opts
+
     const baseName = `${this.name}_${this.opts.name}_${label}.db`
-    const db = (
+
+    const dbPath = (
       typeof dbPathAbsolute === 'string' &&
       path.isAbsolute(dbPathAbsolute)
     )
       ? path.join(dbPathAbsolute, baseName)
-      : path.join(cal.ctx.root, 'db', baseName)
-    this.opts = {
-      ...opts,
-      ...this.opts,
-      db
-    }
+      : path.join(this.caller.ctx.root, 'db', baseName)
+    const workerPath = (
+      typeof workerPathAbsolute === 'string' &&
+      path.isAbsolute(workerPathAbsolute)
+    )
+      ? workerPathAbsolute
+      : path.join(__dirname, 'worker', 'index.js')
 
-    this.init()
+    return {
+      ...this.opts,
+      dbPath,
+      workerPath
+    }
   }
 
   _start (cb) {
@@ -48,22 +57,21 @@ class Sqlite extends Base {
       (next) => { super._start(next) },
       (next) => {
         const {
-          db,
+          isNotWorkerSpawned,
+          workerPath,
+          dbPath,
           readonly,
           fileMustExist,
-          busyTimeout: timeout = 5000,
+          timeout = 5000,
           verbose
         } = this.opts
-        const dbDir = path.dirname(db)
-        const dbParams = [
-          db,
-          {
-            readonly,
-            fileMustExist,
-            timeout,
-            verbose
-          }
-        ]
+        const dbDir = path.dirname(dbPath)
+        const params = {
+          readonly,
+          fileMustExist,
+          timeout,
+          verbose
+        }
 
         fs.access(dbDir, fs.constants.W_OK, (err) => {
           if (err && err.code === 'ENOENT') {
@@ -76,8 +84,21 @@ class Sqlite extends Base {
           }
 
           try {
-            this.db = new Database(...dbParams)
-            this._spawnWorkers(dbParams)
+            this.db = new Database(dbPath, params)
+
+            if (isNotWorkerSpawned) {
+              next()
+
+              return
+            }
+
+            this._spawnWorkers(
+              workerPath,
+              {
+                ...params,
+                dbPath
+              }
+            )
           } catch (err) {
             next(err)
           }
@@ -89,6 +110,10 @@ class Sqlite extends Base {
   }
 
   asyncQuery (args) {
+    if (this.opts.isNotWorkerSpawned) {
+      throw new Error('ERR_WORKER_HAS_NOT_BEEN_SPAWNED')
+    }
+
     const { action, sql, params } = { ...args }
 
     return new Promise((resolve, reject) => {
@@ -100,12 +125,18 @@ class Sqlite extends Base {
     })
   }
 
-  _spawnWorkers (params) {
+  _spawnWorkers (workerPath, workerData) {
     const spawn = () => {
-      // TODO: also need to provide absolute pass from conf
-      const worker = new Worker('./worker.js')
+      const worker = new Worker(
+        workerPath,
+        {
+          workerData,
+          stderr: true,
+          stdout: true
+        }
+      )
+      this._workers.add(worker)
 
-      let isDbReady = false
       let job = null
       let error = null
       let timer = null
@@ -122,32 +153,16 @@ class Sqlite extends Base {
       }
 
       worker
-        .on('online', () => {
-          if (!isDbReady) {
-            worker.postMessage({
-              action: DB_WORKER_ACTIONS.INIT,
-              params
-            })
-          }
-
-          poll()
-        })
+        .on('online', poll)
         .on('message', (result) => {
-          if (
-            !isDbReady &&
-            result &&
-            typeof result === 'object' &&
-            result.isDbReady
-          ) {
-            isDbReady = true
-          }
-
           job.resolve(result)
           job = null
+
           poll()
         })
         .on('error', (err) => {
           console.error(err)
+
           error = err
         })
         .on('exit', (code) => {
@@ -158,6 +173,7 @@ class Sqlite extends Base {
           }
           if (code !== 0) {
             console.error(`worker exited with code ${code}`)
+
             spawn()
           }
         })
@@ -172,6 +188,10 @@ class Sqlite extends Base {
       (next) => {
         try {
           this.db.close()
+
+          for (const worker of this._workers) {
+            worker.terminate()
+          }
         } catch (e) {
           console.error(e)
         }
