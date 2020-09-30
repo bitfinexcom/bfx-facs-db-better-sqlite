@@ -3,7 +3,7 @@
 const { workerData, parentPort } = require('worker_threads')
 const Database = require('better-sqlite3')
 
-const DB_WORKER_ACTIONS = require('./db-worker-actions.const')
+const _executeAction = require('./db-worker-actions')
 
 const _connect = (args) => {
   const {
@@ -25,14 +25,6 @@ const _connect = (args) => {
   )
 }
 
-const _execute = (args) => {
-  const { action, sql, params } = args
-
-  if (action === DB_WORKER_ACTIONS.ALL) {
-    return db.prepare(sql).all(...params)
-  }
-}
-
 const db = _connect(workerData)
 
 process.on('exit', () => db.close())
@@ -43,13 +35,13 @@ process.on('SIGTERM', () => process.exit(128 + 15))
 parentPort.on('message', (args) => {
   const { action } = args
 
-  if (!action) {
-    throw new Error('ERR_ACTION_HAS_NOT_FOUND')
-  }
   if (!(db instanceof Database)) {
     throw new Error('ERR_DB_HAS_NOT_INITIALIZED')
   }
+  if (!action) {
+    throw new Error('ERR_ACTION_HAS_NOT_PASSED')
+  }
 
-  const result = _execute(args)
+  const result = _executeAction(db, args)
   parentPort.postMessage(result)
 })
