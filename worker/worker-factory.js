@@ -7,10 +7,10 @@ module.exports = (executeAction) => {
   const _connect = (args) => {
     const {
       dbPath = './sqlite-db.db',
-      readonly,
-      fileMustExist,
+      readonly = false,
+      fileMustExist = false,
       timeout = 5000,
-      verbose
+      verbose = false
     } = args
 
     return new Database(
@@ -19,7 +19,7 @@ module.exports = (executeAction) => {
         readonly,
         fileMustExist,
         timeout,
-        verbose: verbose ? console.log : null
+        ...(verbose ? { verbose: console.log } : {})
       }
     )
   }

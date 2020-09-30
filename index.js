@@ -60,17 +60,17 @@ class Sqlite extends Base {
           isNotWorkerSpawned,
           workerPath,
           dbPath,
-          readonly,
-          fileMustExist,
+          readonly = false,
+          fileMustExist = false,
           timeout = 5000,
-          verbose
+          verbose = false
         } = this.opts
         const dbDir = path.dirname(dbPath)
         const params = {
           readonly,
           fileMustExist,
           timeout,
-          verbose
+          ...(verbose ? { verbose: console.log } : {})
         }
 
         fs.access(dbDir, fs.constants.W_OK, (err) => {
