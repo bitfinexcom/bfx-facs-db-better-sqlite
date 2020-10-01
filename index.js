@@ -96,7 +96,8 @@ class Sqlite extends Base {
               workerPath,
               {
                 ...params,
-                dbPath
+                dbPath,
+                verbose
               }
             )
           } catch (err) {
@@ -129,11 +130,7 @@ class Sqlite extends Base {
     const spawn = () => {
       const worker = new Worker(
         workerPath,
-        {
-          workerData,
-          stderr: true,
-          stdout: true
-        }
+        { workerData }
       )
       this._workers.add(worker)
 
@@ -154,7 +151,14 @@ class Sqlite extends Base {
 
       worker
         .on('online', poll)
-        .on('message', (result) => {
+        .on('message', (err, result) => {
+          if (err) {
+            job.reject(err)
+            poll()
+
+            return
+          }
+
           job.resolve(result)
           job = null
 

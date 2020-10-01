@@ -24,6 +24,23 @@ module.exports = (executeAction) => {
     )
   }
 
+  const _serializeError = (err) => {
+    if (!(err instanceof Error)) {
+      return err
+    }
+
+    return Object.keys(err).reduce((obj, key) => {
+      obj[key] = err[key]
+
+      return obj
+    }, {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+      isError: true
+    })
+  }
+
   const db = _connect(workerData)
 
   process.on('exit', () => db.close())
@@ -32,16 +49,21 @@ module.exports = (executeAction) => {
   process.on('SIGTERM', () => process.exit(128 + 15))
 
   parentPort.on('message', (args) => {
-    const { action } = args
+    try {
+      const { action } = args
 
-    if (!(db instanceof Database)) {
-      throw new Error('ERR_DB_HAS_NOT_INITIALIZED')
-    }
-    if (!action) {
-      throw new Error('ERR_ACTION_HAS_NOT_PASSED')
-    }
+      if (!(db instanceof Database)) {
+        throw new Error('ERR_DB_HAS_NOT_INITIALIZED')
+      }
+      if (!action) {
+        throw new Error('ERR_ACTION_HAS_NOT_PASSED')
+      }
 
-    const result = executeAction(db, args)
-    parentPort.postMessage(result)
+      const result = executeAction(db, args)
+      parentPort.postMessage(null, result)
+    } catch (err) {
+      const _err = _serializeError(err)
+      parentPort.postMessage(_err)
+    }
   })
 }
