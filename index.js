@@ -9,6 +9,10 @@ const os = require('os')
 const Database = require('better-sqlite3')
 const Base = require('bfx-facs-base')
 
+const DB_WORKER_ACTIONS = require(
+  './worker/db-worker-actions/db-worker-actions.const'
+)
+
 class Sqlite extends Base {
   constructor (caller, opts, ctx) {
     super(caller, opts, ctx)
@@ -111,7 +115,10 @@ class Sqlite extends Base {
   }
 
   asyncQuery (args) {
-    if (this.opts.isNotWorkerSpawned) {
+    if (
+      this.opts.isNotWorkerSpawned ||
+      this._workers.size === 0
+    ) {
       throw new Error('ERR_WORKER_HAS_NOT_BEEN_SPAWNED')
     }
 
@@ -154,6 +161,8 @@ class Sqlite extends Base {
         .on('message', (err, result) => {
           if (err) {
             job.reject(err)
+            job = null
+
             poll()
 
             return
@@ -193,18 +202,28 @@ class Sqlite extends Base {
       (next) => {
         try {
           this.db.close()
-
-          for (const worker of this._workers) {
-            worker.terminate()
-          }
-
-          this._workers.clear()
         } catch (e) {
           console.error(e)
         }
 
         delete this.db
         next()
+      },
+      (next) => {
+        const promises = [...this._workers].map((worker) => {
+          return new Promise((resolve, reject) => {
+            try {
+              worker.on('exit', resolve)
+              worker.postMessage({ action: DB_WORKER_ACTIONS.CLOSE_DB })
+            } catch (err) {
+              reject(err)
+            }
+          })
+        })
+
+        this._workers.clear()
+
+        Promise.allSettled(promises).then(() => next())
       }
     ], cb)
   }

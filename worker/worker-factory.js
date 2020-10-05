@@ -1,5 +1,9 @@
 'use strict'
 
+const DB_WORKER_ACTIONS = require(
+  './db-worker-actions/db-worker-actions.const'
+)
+
 module.exports = (executeAction) => {
   const { workerData, parentPort } = require('worker_threads')
   const Database = require('better-sqlite3')
@@ -43,11 +47,6 @@ module.exports = (executeAction) => {
 
   const db = _connect(workerData)
 
-  process.on('exit', () => db.close())
-  process.on('SIGHUP', () => process.exit(128 + 1))
-  process.on('SIGINT', () => process.exit(128 + 2))
-  process.on('SIGTERM', () => process.exit(128 + 15))
-
   parentPort.on('message', (args) => {
     try {
       const { action } = args
@@ -57,6 +56,10 @@ module.exports = (executeAction) => {
       }
       if (!action) {
         throw new Error('ERR_ACTION_HAS_NOT_PASSED')
+      }
+      if (action === DB_WORKER_ACTIONS.CLOSE_DB) {
+        db.close()
+        process.exit(0)
       }
 
       const result = executeAction(db, args)
