@@ -29,6 +29,8 @@ class Sqlite extends Base {
 
   _getOpts () {
     const {
+      minWorkersCount = 4,
+      maxWorkersCount = 16,
       workerPathAbsolute,
       dbPathAbsolute,
       label
@@ -52,7 +54,9 @@ class Sqlite extends Base {
     return {
       ...this.opts,
       dbPath,
-      workerPath
+      workerPath,
+      minWorkersCount,
+      maxWorkersCount
     }
   }
 
@@ -133,6 +137,20 @@ class Sqlite extends Base {
     })
   }
 
+  _getRequiredWorkersCount () {
+    const cpusCount = os.cpus().length
+    const minRequiredWorkersCount = Math.max(
+      cpusCount,
+      this.opts.minWorkersCount
+    )
+    const maxRequiredWorkersCount = Math.min(
+      minRequiredWorkersCount,
+      this.opts.minWorkersCount
+    )
+
+    return maxRequiredWorkersCount
+  }
+
   _spawnWorkers (workerPath, workerData) {
     const spawn = () => {
       const worker = new Worker(
@@ -193,7 +211,8 @@ class Sqlite extends Base {
         })
     }
 
-    os.cpus().forEach(spawn)
+    new Array(this._getRequiredWorkersCount())
+      .fill().forEach(spawn)
   }
 
   _stop (cb) {
