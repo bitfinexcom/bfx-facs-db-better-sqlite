@@ -18,7 +18,7 @@ class Sqlite extends Base {
     super(caller, opts, ctx)
 
     this._hasConf = false
-    this._workers = new Set()
+    this._workers = new Map()
     this._queue = []
 
     this.name = 'db-sqlite'
@@ -129,11 +129,27 @@ class Sqlite extends Base {
     const { action, sql, params } = { ...args }
 
     return new Promise((resolve, reject) => {
-      this._queue.push({
+      const workerArr = [...this._workers]
+        .reverse()
+        .find(([,jobData]) => {
+          return !jobData.job && jobData.isOnline
+        })
+      const job = {
         resolve,
         reject,
         message: { action, sql, params }
-      })
+      }
+
+      if (!Array.isArray(workerArr)) {
+        this._queue.push(job)
+
+        return
+      }
+
+      const [worker, jobData] = workerArr
+  
+      jobData.job = job
+      worker.postMessage(job.message)
     })
   }
 
@@ -145,7 +161,7 @@ class Sqlite extends Base {
     )
     const maxRequiredWorkersCount = Math.min(
       minRequiredWorkersCount,
-      this.opts.minWorkersCount
+      this.opts.maxWorkersCount
     )
 
     return maxRequiredWorkersCount
@@ -157,51 +173,59 @@ class Sqlite extends Base {
         workerPath,
         { workerData }
       )
-      this._workers.add(worker)
-
-      let job = null
-      let error = null
-      let timer = null
+      const jobData = {
+        job: null,
+        error: null,
+        timer: null,
+        isOnline: false
+      }
+      this._workers.set(worker, jobData)
 
       const poll = () => {
-        if (this._queue.length) {
-          job = this._queue.shift()
-          worker.postMessage(job.message)
+        jobData.isOnline = true
+
+        if (
+          this._queue.length !== 0 &&
+          !jobData.job
+        ) {
+          jobData.job = this._queue.shift()
+          worker.postMessage(jobData.job.message)
 
           return
         }
 
-        timer = setImmediate(poll)
+        jobData.timer = setTimeout(poll, 3000)
+      }
+      const process = (err, result) => {
+        if (err) {
+          jobData.job.reject(err)
+          jobData.job = null
+
+          poll()
+
+          return
+        }
+
+        jobData.job.resolve(result)
+        jobData.job = null
+
+        poll()
       }
 
       worker
         .on('online', poll)
-        .on('message', (err, result) => {
-          if (err) {
-            job.reject(err)
-            job = null
-
-            poll()
-
-            return
-          }
-
-          job.resolve(result)
-          job = null
-
-          poll()
-        })
+        .on('message', process)
         .on('error', (err) => {
           console.error(err)
 
-          error = err
+          jobData.error = err
         })
         .on('exit', (code) => {
-          clearImmediate(timer)
+          clearTimeout(jobData.timer)
           this._workers.delete(worker)
 
-          if (job) {
-            job.reject(error || new Error('worker died'))
+          if (jobData.job) {
+            jobData.job.reject(jobData.error || new Error('worker died'))
           }
           if (code !== 0) {
             console.error(`worker exited with code ${code}`)
@@ -229,7 +253,7 @@ class Sqlite extends Base {
         next()
       },
       (next) => {
-        const promises = [...this._workers].map((worker) => {
+        const promises = [...this._workers].map(([worker]) => {
           return new Promise((resolve, reject) => {
             try {
               worker.on('exit', resolve)
