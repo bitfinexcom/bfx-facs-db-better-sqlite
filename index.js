@@ -131,7 +131,7 @@ class Sqlite extends Base {
     return new Promise((resolve, reject) => {
       const workerArr = [...this._workers]
         .reverse()
-        .find(([,jobData]) => {
+        .find(([, jobData]) => {
           return !jobData.job && jobData.isOnline
         })
       const job = {
@@ -147,7 +147,7 @@ class Sqlite extends Base {
       }
 
       const [worker, jobData] = workerArr
-  
+
       jobData.job = job
       worker.postMessage(job.message)
     })
@@ -196,7 +196,7 @@ class Sqlite extends Base {
 
         jobData.timer = setTimeout(poll, 3000)
       }
-      const process = (err, result) => {
+      const process = ({ err, result }) => {
         if (err) {
           jobData.job.reject(err)
           jobData.job = null

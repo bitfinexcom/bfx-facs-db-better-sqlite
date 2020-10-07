@@ -63,10 +63,10 @@ module.exports = (executeAction) => {
       }
 
       const result = executeAction(db, args)
-      parentPort.postMessage(null, result)
-    } catch (err) {
-      const _err = _serializeError(err)
-      parentPort.postMessage(_err)
+      parentPort.postMessage({ result })
+    } catch (e) {
+      const err = _serializeError(e)
+      parentPort.postMessage({ err })
     }
   })
 }
