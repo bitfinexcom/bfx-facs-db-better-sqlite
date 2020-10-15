@@ -2,5 +2,6 @@
 
 module.exports = {
   CLOSE_DB: 'CLOSE_DB',
-  ALL: 'ALL'
+  ALL: 'ALL',
+  EXEC_PRAGMA: 'EXEC_PRAGMA'
 }

@@ -29,6 +29,7 @@ class Sqlite extends Base {
 
   _getOpts () {
     const {
+      unacceptableWalFileSize = 100000000,
       minWorkersCount = 4,
       maxWorkersCount = 16,
       workerPathAbsolute,
@@ -56,7 +57,8 @@ class Sqlite extends Base {
       dbPath,
       workerPath,
       minWorkersCount,
-      maxWorkersCount
+      maxWorkersCount,
+      unacceptableWalFileSize
     }
   }
 
@@ -153,6 +155,40 @@ class Sqlite extends Base {
     })
   }
 
+  initializeWalCheckpointRestart (ms = 10000) {
+    const {
+      dbPath,
+      unacceptableWalFileSize,
+      isNotWorkerSpawned
+    } = this.opts
+    const walFile = `${dbPath}-wal`
+
+    clearInterval(this._checkpointRestartInterval)
+
+    this._checkpointRestartInterval = setInterval(() => {
+      fs.stat(walFile, (err, stat) => {
+        if (err) {
+          if (err.code === 'ENOENT') return
+
+          throw err
+        }
+        if (stat.size < unacceptableWalFileSize) {
+          return
+        }
+        if (isNotWorkerSpawned) {
+          this.db.pragma('wal_checkpoint(RESTART)')
+
+          return
+        }
+
+        this.asyncQuery({
+          action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+          sql: 'wal_checkpoint(RESTART)'
+        }).catch((err) => console.error(err))
+      })
+    }, ms).unref()
+  }
+
   _getRequiredWorkersCount () {
     const cpusCount = os.cpus().length
     const minRequiredWorkersCount = Math.max(
@@ -164,7 +200,7 @@ class Sqlite extends Base {
       this.opts.maxWorkersCount
     )
 
-    return maxRequiredWorkersCount
+    return Math.max(maxRequiredWorkersCount, 1)
   }
 
   _spawnWorkers (workerPath, workerData) {
