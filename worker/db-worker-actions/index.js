@@ -4,6 +4,7 @@ const DB_WORKER_ACTIONS = require('./db-worker-actions.const')
 
 const actionGet = require('./action-get')
 const actionAll = require('./action-all')
+const actionRun = require('./action-run')
 const actionExecPragma = require('./action-exec-pragma')
 
 module.exports = (db, args) => {
@@ -14,6 +15,9 @@ module.exports = (db, args) => {
   }
   if (action === DB_WORKER_ACTIONS.ALL) {
     return actionAll(db, sql, params)
+  }
+  if (action === DB_WORKER_ACTIONS.RUN) {
+    return actionRun(db, sql, params)
   }
   if (action === DB_WORKER_ACTIONS.EXEC_PRAGMA) {
     return actionExecPragma(db, sql, params)
