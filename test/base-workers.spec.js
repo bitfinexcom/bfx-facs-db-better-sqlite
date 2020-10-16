@@ -7,6 +7,9 @@ const {
   mkdirSync
 } = require('fs')
 
+const DB_WORKER_ACTIONS = require(
+  '../worker/db-worker-actions/db-worker-actions.const'
+)
 const Fac = require('../')
 const caller = { ctx: { root: __dirname } }
 const dbDir = path.join(__dirname, 'db')
@@ -34,6 +37,31 @@ describe('Base workers', () => {
 
         done()
       })
+    })
+  })
+
+  describe('Query', () => {
+    let fac
+
+    before((done) => {
+      fac = new Fac(caller, {})
+      fac.start(done)
+    })
+
+    after((done) => {
+      fac.stop(done)
+    })
+
+    it('Enable WAL journal mode in PRAGMA', async () => {
+      const res = await fac.asyncQuery({
+        action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+        sql: 'journal_mode = WAL'
+      })
+
+      assert.strictEqual(res, 'wal')
+
+      fac.initializeWalCheckpointRestart(1000)
+      await new Promise((resolve) => setTimeout(resolve, 1000))
     })
   })
 })
