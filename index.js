@@ -34,10 +34,13 @@ class Sqlite extends Base {
       maxWorkersCount = 16,
       workerPathAbsolute,
       dbPathAbsolute,
+      name,
       label
     } = this.opts
 
-    const baseName = `${this.name}_${this.opts.name}_${label}.db`
+    const _name = name ? `_${name}` : ''
+    const _label = label ? `_${label}` : ''
+    const baseName = `${this.name}${_name}${_label}.db`
 
     const dbPath = (
       typeof dbPathAbsolute === 'string' &&
