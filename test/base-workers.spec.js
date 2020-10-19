@@ -89,5 +89,19 @@ describe('Base workers', () => {
         sql: getTableDeletionQuery(tableModel)
       })
     })
+
+    it('Throw error for wrong sql query via run-action', async () => {
+      try {
+        await fac.asyncQuery({
+          action: DB_WORKER_ACTIONS.RUN,
+          sql: 'wrong'
+        })
+      } catch (err) {
+        assert.throws(
+          () => { throw err },
+          'near "wrong": syntax error'
+        )
+      }
+    })
   })
 })
