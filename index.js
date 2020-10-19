@@ -237,7 +237,9 @@ class Sqlite extends Base {
       }
       const process = ({ err, result }) => {
         if (err) {
-          jobData.job.reject(err)
+          const _err = this._deserializeError(err)
+
+          jobData.job.reject(_err)
           jobData.job = null
 
           poll()
@@ -255,9 +257,10 @@ class Sqlite extends Base {
         .on('online', poll)
         .on('message', process)
         .on('error', (err) => {
-          console.error(err)
+          const _err = this._deserializeError(err)
+          console.error(_err)
 
-          jobData.error = err
+          jobData.error = _err
         })
         .on('exit', (code) => {
           clearTimeout(jobData.timer)
@@ -276,6 +279,18 @@ class Sqlite extends Base {
 
     new Array(this._getRequiredWorkersCount())
       .fill().forEach(spawn)
+  }
+
+  _deserializeError (err) {
+    if (err instanceof Error) {
+      return err
+    }
+
+    return Object.keys(err).reduce((obj, key) => {
+      obj[key] = err[key]
+
+      return obj
+    }, new Error())
   }
 
   _stop (cb) {
