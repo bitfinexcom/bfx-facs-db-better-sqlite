@@ -132,12 +132,42 @@ describe('Base workers', () => {
         sql: `SELECT * FROM ${tableModel[0]}`
       })
 
+      assert.isArray(rows)
       assert.lengthOf(rows, tableData.length)
 
       for (const [i, row] of rows.entries()) {
         assert.isFinite(row.id)
         assert.ownInclude(row, tableData[i])
       }
+
+      await fac.asyncQuery({
+        action: DB_WORKER_ACTIONS.RUN,
+        sql: getTableDeletionQuery(tableModel)
+      })
+    })
+
+    it('Fetch one row via get-action', async () => {
+      await fac.asyncQuery({
+        action: DB_WORKER_ACTIONS.RUN,
+        sql: getTableCreationQuery(tableModel)
+      })
+
+      await fac.asyncQuery({
+        action: DB_WORKER_ACTIONS.RUN,
+        sql: `INSERT INTO
+          ${tableModel[0]}(number, text)
+          VALUES($number, $text)`,
+        params: tableData[0]
+      })
+
+      const row = await fac.asyncQuery({
+        action: DB_WORKER_ACTIONS.GET,
+        sql: `SELECT * FROM ${tableModel[0]}`
+      })
+
+      assert.isObject(row)
+      assert.isFinite(row.id)
+      assert.ownInclude(row, tableData[0])
 
       await fac.asyncQuery({
         action: DB_WORKER_ACTIONS.RUN,
