@@ -7,12 +7,26 @@ const {
   mkdirSync
 } = require('fs')
 
+const {
+  getTableCreationQuery,
+  getTableDeletionQuery
+} = require('./helpers')
+
 const DB_WORKER_ACTIONS = require(
   '../worker/db-worker-actions/db-worker-actions.const'
 )
 const Fac = require('../')
 const caller = { ctx: { root: __dirname } }
 const dbDir = path.join(__dirname, 'db')
+
+const tableModel = [
+  'table1',
+  {
+    id: 'INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT',
+    number: 'INTEGER',
+    text: 'VARCHAR(255)'
+  }
+]
 
 describe('Base workers', () => {
   before(() => {
@@ -62,6 +76,18 @@ describe('Base workers', () => {
 
       fac.initializeWalCheckpointRestart(1000)
       await new Promise((resolve) => setTimeout(resolve, 1000))
+    })
+
+    it('Create table via run-action', async () => {
+      await fac.asyncQuery({
+        action: DB_WORKER_ACTIONS.RUN,
+        sql: getTableCreationQuery(tableModel)
+      })
+
+      await fac.asyncQuery({
+        action: DB_WORKER_ACTIONS.RUN,
+        sql: getTableDeletionQuery(tableModel)
+      })
     })
   })
 })
