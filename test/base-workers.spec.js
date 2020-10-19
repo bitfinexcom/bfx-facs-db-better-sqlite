@@ -27,6 +27,13 @@ const tableModel = [
     text: 'VARCHAR(255)'
   }
 ]
+const tableData = [
+  { number: 11, text: 'test-11' },
+  { number: 12, text: 'test-12' },
+  { number: 13, text: 'test-13' },
+  { number: 14, text: 'test-14' },
+  { number: 15, text: 'test-15' }
+]
 
 describe('Base workers', () => {
   before(() => {
@@ -102,6 +109,40 @@ describe('Base workers', () => {
           'near "wrong": syntax error'
         )
       }
+    })
+
+    it('Fetch all data via all-action', async () => {
+      await fac.asyncQuery({
+        action: DB_WORKER_ACTIONS.RUN,
+        sql: getTableCreationQuery(tableModel)
+      })
+
+      for (const params of tableData) {
+        await fac.asyncQuery({
+          action: DB_WORKER_ACTIONS.RUN,
+          sql: `INSERT INTO
+            ${tableModel[0]}(number, text)
+            VALUES($number, $text)`,
+          params
+        })
+      }
+
+      const rows = await fac.asyncQuery({
+        action: DB_WORKER_ACTIONS.ALL,
+        sql: `SELECT * FROM ${tableModel[0]}`
+      })
+
+      assert.lengthOf(rows, tableData.length)
+
+      for (const [i, row] of rows.entries()) {
+        assert.isFinite(row.id)
+        assert.ownInclude(row, tableData[i])
+      }
+
+      await fac.asyncQuery({
+        action: DB_WORKER_ACTIONS.RUN,
+        sql: getTableDeletionQuery(tableModel)
+      })
     })
   })
 })
