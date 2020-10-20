@@ -52,10 +52,10 @@ module.exports = (executeAction) => {
       const { action } = args
 
       if (!(db instanceof Database)) {
-        throw new Error('ERR_DB_HAS_NOT_INITIALIZED')
+        throw new Error('ERR_DB_HAS_NOT_BEEN_INITIALIZED')
       }
       if (!action) {
-        throw new Error('ERR_ACTION_HAS_NOT_PASSED')
+        throw new Error('ERR_ACTION_HAS_NOT_BEEN_PASSED')
       }
       if (action === DB_WORKER_ACTIONS.CLOSE_DB) {
         db.close()

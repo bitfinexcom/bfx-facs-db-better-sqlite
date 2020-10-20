@@ -23,5 +23,5 @@ module.exports = (db, args) => {
     return actionExecPragma(db, sql, params)
   }
 
-  throw new Error('ERR_ACTION_HAS_NOT_FOUND')
+  throw new Error('ERR_ACTION_HAS_NOT_BEEN_FOUND')
 }

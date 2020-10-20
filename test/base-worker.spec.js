@@ -15,9 +15,9 @@ const {
 const DB_WORKER_ACTIONS = require(
   '../worker/db-worker-actions/db-worker-actions.const'
 )
-const Fac = require('../')
+const Fac = require('..')
 const caller = { ctx: { root: __dirname } }
-const dbDir = path.join(__dirname, 'db')
+const dbPathAbsolute = path.join(__dirname, 'db')
 
 const tableModel = [
   'table1',
@@ -35,18 +35,18 @@ const tableData = [
   { number: 15, text: 'test-15' }
 ]
 
-describe('Base workers', () => {
+describe('Base worker', () => {
   before(() => {
-    rmdirSync(dbDir, { recursive: true })
-    mkdirSync(dbDir, { recursive: true })
+    rmdirSync(dbPathAbsolute, { recursive: true })
+    mkdirSync(dbPathAbsolute, { recursive: true })
   })
 
   after(() => {
-    rmdirSync(dbDir, { recursive: true })
+    rmdirSync(dbPathAbsolute, { recursive: true })
   })
 
   it('Setup step', (done) => {
-    const fac = new Fac(caller, {})
+    const fac = new Fac(caller, { dbPathAbsolute })
 
     fac.start((err) => {
       assert.ifError(err)
@@ -65,7 +65,7 @@ describe('Base workers', () => {
     let fac
 
     before((done) => {
-      fac = new Fac(caller, {})
+      fac = new Fac(caller, { dbPathAbsolute })
       fac.start(done)
     })
 
@@ -111,67 +111,63 @@ describe('Base workers', () => {
       }
     })
 
-    it('Fetch all data via all-action', async () => {
-      await fac.asyncQuery({
-        action: DB_WORKER_ACTIONS.RUN,
-        sql: getTableCreationQuery(tableModel)
+    describe('Table query', () => {
+      beforeEach(async () => {
+        await fac.asyncQuery({
+          action: DB_WORKER_ACTIONS.RUN,
+          sql: getTableCreationQuery(tableModel)
+        })
       })
 
-      for (const params of tableData) {
+      afterEach(async () => {
+        await fac.asyncQuery({
+          action: DB_WORKER_ACTIONS.RUN,
+          sql: getTableDeletionQuery(tableModel)
+        })
+      })
+
+      it('Fetch all data via all-action', async () => {
+        for (const params of tableData) {
+          await fac.asyncQuery({
+            action: DB_WORKER_ACTIONS.RUN,
+            sql: `INSERT INTO
+              ${tableModel[0]}(number, text)
+              VALUES($number, $text)`,
+            params
+          })
+        }
+
+        const rows = await fac.asyncQuery({
+          action: DB_WORKER_ACTIONS.ALL,
+          sql: `SELECT * FROM ${tableModel[0]}`
+        })
+
+        assert.isArray(rows)
+        assert.lengthOf(rows, tableData.length)
+
+        for (const [i, row] of rows.entries()) {
+          assert.isFinite(row.id)
+          assert.ownInclude(row, tableData[i])
+        }
+      })
+
+      it('Fetch one row via get-action', async () => {
         await fac.asyncQuery({
           action: DB_WORKER_ACTIONS.RUN,
           sql: `INSERT INTO
             ${tableModel[0]}(number, text)
             VALUES($number, $text)`,
-          params
+          params: tableData[0]
         })
-      }
 
-      const rows = await fac.asyncQuery({
-        action: DB_WORKER_ACTIONS.ALL,
-        sql: `SELECT * FROM ${tableModel[0]}`
-      })
+        const row = await fac.asyncQuery({
+          action: DB_WORKER_ACTIONS.GET,
+          sql: `SELECT * FROM ${tableModel[0]}`
+        })
 
-      assert.isArray(rows)
-      assert.lengthOf(rows, tableData.length)
-
-      for (const [i, row] of rows.entries()) {
+        assert.isObject(row)
         assert.isFinite(row.id)
-        assert.ownInclude(row, tableData[i])
-      }
-
-      await fac.asyncQuery({
-        action: DB_WORKER_ACTIONS.RUN,
-        sql: getTableDeletionQuery(tableModel)
-      })
-    })
-
-    it('Fetch one row via get-action', async () => {
-      await fac.asyncQuery({
-        action: DB_WORKER_ACTIONS.RUN,
-        sql: getTableCreationQuery(tableModel)
-      })
-
-      await fac.asyncQuery({
-        action: DB_WORKER_ACTIONS.RUN,
-        sql: `INSERT INTO
-          ${tableModel[0]}(number, text)
-          VALUES($number, $text)`,
-        params: tableData[0]
-      })
-
-      const row = await fac.asyncQuery({
-        action: DB_WORKER_ACTIONS.GET,
-        sql: `SELECT * FROM ${tableModel[0]}`
-      })
-
-      assert.isObject(row)
-      assert.isFinite(row.id)
-      assert.ownInclude(row, tableData[0])
-
-      await fac.asyncQuery({
-        action: DB_WORKER_ACTIONS.RUN,
-        sql: getTableDeletionQuery(tableModel)
+        assert.ownInclude(row, tableData[0])
       })
     })
   })

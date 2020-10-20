@@ -124,10 +124,7 @@ class Sqlite extends Base {
   }
 
   asyncQuery (args) {
-    if (
-      this.opts.isNotWorkerSpawned ||
-      this._workers.size === 0
-    ) {
+    if (this.opts.isNotWorkerSpawned) {
       throw new Error('ERR_WORKER_HAS_NOT_BEEN_SPAWNED')
     }
 
