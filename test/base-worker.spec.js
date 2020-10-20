@@ -61,6 +61,41 @@ describe('Base worker', () => {
     })
   })
 
+  it('Throw error if worker is not spawned', async () => {
+    const fac = await new Promise((resolve, reject) => {
+      const fac = new Fac(
+        caller,
+        { dbPathAbsolute, isNotWorkerSpawned: true }
+      )
+
+      fac.start((err) => {
+        if (err) reject(err)
+
+        assert.isOk(fac._workers.size === 0)
+
+        fac.stop((err) => {
+          if (err) reject(err)
+
+          assert.isOk(fac._workers.size === 0)
+
+          resolve(fac)
+        })
+      })
+    })
+
+    try {
+      await fac.asyncQuery({
+        action: DB_WORKER_ACTIONS.RUN,
+        sql: getTableCreationQuery(tableModel)
+      })
+    } catch (err) {
+      assert.throws(
+        () => { throw err },
+        'ERR_WORKER_HAS_NOT_BEEN_SPAWNED'
+      )
+    }
+  })
+
   describe('Query', () => {
     let fac
 
