@@ -105,4 +105,36 @@ describe('Load extended worker', () => {
       .fill().map(() => runner(rowsLength))
     await Promise.all(promises)
   })
+
+  it('Insert rows per 10 parallel operations by 500000 items via run-in-trans-action', async function () {
+    this.timeout(120000)
+
+    const parallelOperationCount = 10
+    const rowsLength = 500000
+
+    const runner = async (length) => {
+      const transInsertRes = await fac.asyncQuery({
+        action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
+        sql: `INSERT INTO
+          ${tableModel[0]}(number, text)
+          VALUES($number, $text)`,
+        params: new Array(length)
+          .fill({ number: length, text: `test-${length}` })
+      })
+
+      assert.strictEqual(transInsertRes.changes, length)
+    }
+
+    const promises = new Array(parallelOperationCount)
+      .fill().map(() => runner(rowsLength))
+    await Promise.all(promises)
+
+    const rows = await fac.asyncQuery({
+      action: BASE_DB_WORKER_ACTIONS.ALL,
+      sql: `SELECT * FROM ${tableModel[0]}`
+    })
+
+    assert.isArray(rows)
+    assert.isAtLeast(rows.length, rowsLength * parallelOperationCount)
+  })
 })
