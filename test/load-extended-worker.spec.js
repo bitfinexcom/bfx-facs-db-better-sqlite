@@ -169,4 +169,35 @@ describe('Load extended worker', () => {
       .fill().map(() => runner(rowsLength))
     await Promise.all(promises)
   })
+
+  it('Insert rows per 100000 parallel operations by 1 item via run-action', async function () {
+    this.timeout(120000)
+
+    const rowsLength = 100000
+
+    const runner = async (params) => {
+      const transInsertRes = await fac.asyncQuery({
+        action: BASE_DB_WORKER_ACTIONS.RUN,
+        sql: `INSERT INTO
+          ${tableModel[0]}(number, text)
+          VALUES($number, $text)`,
+        params
+      })
+
+      assert.strictEqual(transInsertRes.changes, 1)
+    }
+
+    const promises = new Array(rowsLength)
+      .fill({ number: rowsLength, text: `test-${rowsLength}` })
+      .map((row) => runner(row))
+    await Promise.all(promises)
+
+    const rows = await fac.asyncQuery({
+      action: BASE_DB_WORKER_ACTIONS.ALL,
+      sql: `SELECT * FROM ${tableModel[0]}`
+    })
+
+    assert.isArray(rows)
+    assert.isAtLeast(rows.length, rowsLength)
+  })
 })
