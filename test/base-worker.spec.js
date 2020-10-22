@@ -1,6 +1,8 @@
 'use strict'
 
-const { assert } = require('chai')
+const chai = require('chai')
+chai.use(require('chai-fs'))
+const { assert } = chai
 const path = require('path')
 const {
   rmdirSync,
@@ -45,61 +47,96 @@ describe('Base worker', () => {
     rmdirSync(dbPathAbsolute, { recursive: true })
   })
 
-  it('Setup step', (done) => {
-    const fac = new Fac(caller, { dbPathAbsolute })
-
-    fac.start((err) => {
-      assert.ifError(err)
-      assert.isOk(fac._workers.size >= 1)
-
-      fac.stop((err) => {
-        assert.ifError(err)
-        assert.isOk(fac._workers.size === 0)
-
-        done()
-      })
+  describe('Setup step', () => {
+    beforeEach(() => {
+      rmdirSync(dbPathAbsolute, { recursive: true })
+      mkdirSync(dbPathAbsolute, { recursive: true })
     })
-  })
 
-  it('Throw error if worker is not spawned', async () => {
-    const fac = await new Promise((resolve, reject) => {
-      const fac = new Fac(
-        caller,
-        { dbPathAbsolute, isNotWorkerSpawned: true }
-      )
+    it('Store DB in file', (done) => {
+      const fac = new Fac(caller, { dbPathAbsolute })
 
       fac.start((err) => {
-        if (err) reject(err)
-
-        assert.isOk(fac._workers.size === 0)
+        assert.ifError(err)
+        assert.isOk(fac._workers.size >= 1)
+        assert.isString(fac.opts.dbPath)
+        assert.isOk(path.isAbsolute(fac.opts.dbPath))
+        assert.pathExists(fac.opts.dbPath)
 
         fac.stop((err) => {
-          if (err) reject(err)
-
+          assert.ifError(err)
           assert.isOk(fac._workers.size === 0)
 
-          resolve(fac)
+          done()
         })
       })
     })
 
-    try {
-      await fac.asyncQuery({
-        action: DB_WORKER_ACTIONS.RUN,
-        sql: getTableCreationQuery(tableModel)
-      })
-    } catch (err) {
-      assert.throws(
-        () => { throw err },
-        'ERR_WORKER_HAS_NOT_BEEN_SPAWNED'
+    it('Store DB in memory', (done) => {
+      const fac = new Fac(
+        caller,
+        { dbPathAbsolute, isSqliteStoredInMemory: true }
       )
-    }
+
+      fac.start((err) => {
+        assert.ifError(err)
+        assert.isOk(fac._workers.size >= 1)
+        assert.isString(fac.opts.dbPath)
+        assert.isOk(path.isAbsolute(fac.opts.dbPath))
+        assert.notPathExists(fac.opts.dbPath)
+
+        fac.stop((err) => {
+          assert.ifError(err)
+          assert.isOk(fac._workers.size === 0)
+
+          done()
+        })
+      })
+    })
+
+    it('Throw error if worker is not spawned', async () => {
+      const fac = await new Promise((resolve, reject) => {
+        const fac = new Fac(
+          caller,
+          { dbPathAbsolute, isNotWorkerSpawned: true }
+        )
+
+        fac.start((err) => {
+          if (err) reject(err)
+
+          assert.isOk(fac._workers.size === 0)
+
+          fac.stop((err) => {
+            if (err) reject(err)
+
+            assert.isOk(fac._workers.size === 0)
+
+            resolve(fac)
+          })
+        })
+      })
+
+      try {
+        await fac.asyncQuery({
+          action: DB_WORKER_ACTIONS.RUN,
+          sql: getTableCreationQuery(tableModel)
+        })
+      } catch (err) {
+        assert.throws(
+          () => { throw err },
+          'ERR_WORKER_HAS_NOT_BEEN_SPAWNED'
+        )
+      }
+    })
   })
 
   describe('Query', () => {
     let fac
 
     before((done) => {
+      rmdirSync(dbPathAbsolute, { recursive: true })
+      mkdirSync(dbPathAbsolute, { recursive: true })
+
       fac = new Fac(caller, { dbPathAbsolute })
       fac.start(done)
     })
