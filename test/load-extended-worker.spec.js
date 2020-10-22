@@ -170,10 +170,10 @@ describe('Load extended worker', () => {
     await Promise.all(promises)
   })
 
-  it('Insert rows per 100000 parallel operations by 1 item via run-action', async function () {
+  it('Insert rows per 50000 parallel operations by 1 item via run-action', async function () {
     this.timeout(120000)
 
-    const rowsLength = 100000
+    const rowsLength = 50000
 
     const runner = async (params) => {
       const transInsertRes = await fac.asyncQuery({
