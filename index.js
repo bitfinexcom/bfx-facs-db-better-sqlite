@@ -65,26 +65,67 @@ class Sqlite extends Base {
     }
   }
 
+  _initDb (cb) {
+    const {
+      isSqliteStoredInMemory,
+      isNotWorkerSpawned,
+      workerPath,
+      dbPath: _dbPath,
+      readonly = false,
+      fileMustExist = false,
+      timeout = 5000,
+      verbose = false
+    } = this.opts
+    const params = {
+      readonly,
+      fileMustExist,
+      timeout,
+      ...(verbose ? { verbose: console.log } : {})
+    }
+    const dbPath = isSqliteStoredInMemory
+      ? ':memory:'
+      : _dbPath
+
+    try {
+      this.db = new Database(dbPath, params)
+
+      if (isNotWorkerSpawned) {
+        cb()
+
+        return
+      }
+
+      this._spawnWorkers(
+        workerPath,
+        {
+          ...params,
+          dbPath,
+          verbose
+        }
+      )
+    } catch (err) {
+      cb(err)
+    }
+
+    cb()
+  }
+
   _start (cb) {
     async.series([
       (next) => { super._start(next) },
       (next) => {
         const {
-          isNotWorkerSpawned,
-          workerPath,
-          dbPath,
-          readonly = false,
-          fileMustExist = false,
-          timeout = 5000,
-          verbose = false
+          isSqliteStoredInMemory,
+          dbPath
         } = this.opts
-        const dbDir = path.dirname(dbPath)
-        const params = {
-          readonly,
-          fileMustExist,
-          timeout,
-          ...(verbose ? { verbose: console.log } : {})
+
+        if (isSqliteStoredInMemory) {
+          this._initDb(next)
+
+          return
         }
+
+        const dbDir = path.dirname(dbPath)
 
         fs.access(dbDir, fs.constants.W_OK, (err) => {
           if (err && err.code === 'ENOENT') {
@@ -96,28 +137,7 @@ class Sqlite extends Base {
             return cb(err)
           }
 
-          try {
-            this.db = new Database(dbPath, params)
-
-            if (isNotWorkerSpawned) {
-              next()
-
-              return
-            }
-
-            this._spawnWorkers(
-              workerPath,
-              {
-                ...params,
-                dbPath,
-                verbose
-              }
-            )
-          } catch (err) {
-            next(err)
-          }
-
-          next()
+          this._initDb(next)
         })
       }
     ], cb)
