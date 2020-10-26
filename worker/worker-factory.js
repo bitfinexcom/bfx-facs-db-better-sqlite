@@ -57,12 +57,13 @@ module.exports = (executeAction) => {
       if (!action) {
         throw new Error('ERR_ACTION_HAS_NOT_BEEN_PASSED')
       }
-      if (action === DB_WORKER_ACTIONS.CLOSE_DB) {
-        db.close()
-        process.exit(0)
-      }
 
       const result = executeAction(db, args)
+
+      if (action === DB_WORKER_ACTIONS.CLOSE_DB) {
+        return
+      }
+
       parentPort.postMessage({ result })
     } catch (e) {
       const err = _serializeError(e)
