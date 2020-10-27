@@ -1,0 +1,38 @@
+{
+  "name": "bfx-facs-db-better-sqlite",
+  "version": "0.0.1",
+  "description": "Bitfinex DB Sqlite3 Facility",
+  "author": {
+    "name": "Vladimir Voronkov",
+    "email": "vsvoronkov@gmail.com"
+  },
+  "main": "index.js",
+  "keywords": [
+    "bitfinex"
+  ],
+  "scripts": {
+    "test": "npm run lint && npm run unit",
+    "unit": "mocha './test/**/*.spec.js' --config .mocharc.json",
+    "lint": "standard --env mocha"
+  },
+  "dependencies": {
+    "async": "^3.2.0",
+    "better-sqlite3": "^7.1.1",
+    "bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git"
+  },
+  "engine": {
+    "node": ">=12.16.0"
+  },
+  "license": "Apache-2.0",
+  "contributors": [
+    "Paolo Ardoino <paolo@bitfinex.com>",
+    "Ezequiel Wernicke <ezequiel.wernicke@bitfinex.com>",
+    "Vladimir Voronkov <vsvoronkov@gmail.com>"
+  ],
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "chai-fs": "^2.0.0",
+    "mocha": "^8.1.3",
+    "standard": "^14.3.4"
+  }
+}
