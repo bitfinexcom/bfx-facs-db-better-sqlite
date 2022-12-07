@@ -16,7 +16,7 @@
     "lint": "standard --env mocha"
   },
   "dependencies": {
-    "async": "^3.2.0",
+    "async": "3.2.4",
     "better-sqlite3": "8.0.1",
     "bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git"
   },
@@ -32,7 +32,7 @@
   "devDependencies": {
     "chai": "^4.2.0",
     "chai-fs": "^2.0.0",
-    "mocha": "^8.1.3",
-    "standard": "^14.3.4"
+    "mocha": "^10.1.0",
+    "standard": "^17.0.0"
   }
 }
