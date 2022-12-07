@@ -17,11 +17,11 @@
   },
   "dependencies": {
     "async": "^3.2.0",
-    "better-sqlite3": "7.5.0",
+    "better-sqlite3": "8.0.1",
     "bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git"
   },
   "engine": {
-    "node": ">=12.16.0"
+    "node": ">=14.16.0"
   },
   "license": "Apache-2.0",
   "contributors": [
