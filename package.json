@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "async": "3.2.4",
-    "better-sqlite3": "7.6.2",
+    "better-sqlite3": "8.3.0",
     "bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git"
   },
   "engine": {
