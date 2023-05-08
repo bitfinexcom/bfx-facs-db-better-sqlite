@@ -3,13 +3,13 @@
 const { assert } = require('chai')
 const path = require('path')
 const {
-  rmdirSync,
   mkdirSync
 } = require('fs')
 
 const {
   getTableCreationQuery,
-  getTableDeletionQuery
+  getTableDeletionQuery,
+  rmRfSync
 } = require('./helpers')
 
 const BASE_DB_WORKER_ACTIONS = require(
@@ -42,12 +42,12 @@ const tableData = [
 
 describe('Extended worker', () => {
   before(() => {
-    rmdirSync(dbPathAbsolute, { recursive: true })
+    rmRfSync(dbPathAbsolute)
     mkdirSync(dbPathAbsolute, { recursive: true })
   })
 
   after(() => {
-    rmdirSync(dbPathAbsolute, { recursive: true })
+    rmRfSync(dbPathAbsolute)
   })
 
   it('Setup step', (done) => {

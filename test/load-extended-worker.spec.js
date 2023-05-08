@@ -3,14 +3,14 @@
 const { assert } = require('chai')
 const path = require('path')
 const {
-  rmdirSync,
   mkdirSync
 } = require('fs')
 const { promisify } = require('util')
 
 const {
   getTableCreationQuery,
-  getTableDeletionQuery
+  getTableDeletionQuery,
+  rmRfSync
 } = require('./helpers')
 
 const BASE_DB_WORKER_ACTIONS = require(
@@ -38,7 +38,7 @@ describe('Load extended worker', () => {
   let fac
 
   before(async () => {
-    rmdirSync(dbPathAbsolute, { recursive: true })
+    rmRfSync(dbPathAbsolute)
     mkdirSync(dbPathAbsolute, { recursive: true })
 
     fac = new Fac(
@@ -55,7 +55,7 @@ describe('Load extended worker', () => {
 
   after((done) => {
     fac.stop(() => {
-      rmdirSync(dbPathAbsolute, { recursive: true })
+      rmRfSync(dbPathAbsolute)
       done()
     })
   })

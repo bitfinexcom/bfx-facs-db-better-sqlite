@@ -5,13 +5,13 @@ chai.use(require('chai-fs'))
 const { assert } = chai
 const path = require('path')
 const {
-  rmdirSync,
   mkdirSync
 } = require('fs')
 
 const {
   getTableCreationQuery,
-  getTableDeletionQuery
+  getTableDeletionQuery,
+  rmRfSync
 } = require('./helpers')
 
 const DB_WORKER_ACTIONS = require(
@@ -39,17 +39,17 @@ const tableData = [
 
 describe('Base worker', () => {
   before(() => {
-    rmdirSync(dbPathAbsolute, { recursive: true })
+    rmRfSync(dbPathAbsolute)
     mkdirSync(dbPathAbsolute, { recursive: true })
   })
 
   after(() => {
-    rmdirSync(dbPathAbsolute, { recursive: true })
+    rmRfSync(dbPathAbsolute)
   })
 
   describe('Setup step', () => {
     beforeEach(() => {
-      rmdirSync(dbPathAbsolute, { recursive: true })
+      rmRfSync(dbPathAbsolute)
       mkdirSync(dbPathAbsolute, { recursive: true })
     })
 
@@ -134,7 +134,7 @@ describe('Base worker', () => {
     let fac
 
     before((done) => {
-      rmdirSync(dbPathAbsolute, { recursive: true })
+      rmRfSync(dbPathAbsolute)
       mkdirSync(dbPathAbsolute, { recursive: true })
 
       fac = new Fac(caller, { dbPathAbsolute })
