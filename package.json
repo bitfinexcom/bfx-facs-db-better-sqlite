@@ -1,6 +1,6 @@
 {
   "name": "bfx-facs-db-better-sqlite",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Bitfinex DB Sqlite3 Facility",
   "author": {
     "name": "Vladimir Voronkov",
