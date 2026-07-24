@@ -1,6 +1,6 @@
 {
   "name": "@bitfinex/bfx-facs-db-better-sqlite",
-  "version": "2.1.1",
+  "version": "3.0.0",
   "description": "Bitfinex DB Sqlite3 Facility",
   "author": {
     "name": "Vladimir Voronkov",
@@ -18,10 +18,10 @@
   "dependencies": {
     "@bitfinex/bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git",
     "async": "3.2.4",
-    "better-sqlite3": "12.6.2"
+    "better-sqlite3": "13.0.1"
   },
   "engines": {
-    "node": ">=20.18.1"
+    "node": ">=22"
   },
   "license": "Apache-2.0",
   "contributors": [
