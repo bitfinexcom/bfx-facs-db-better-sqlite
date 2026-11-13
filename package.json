@@ -1,6 +1,6 @@
 {
   "name": "@bitfinex/bfx-facs-db-better-sqlite",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Bitfinex DB Sqlite3 Facility",
   "author": {
     "name": "Vladimir Voronkov",
@@ -13,11 +13,12 @@
   "scripts": {
     "test": "npm run lint && npm run unit",
     "unit": "mocha './test/**/*.spec.js' --config .mocharc.json",
-    "lint": "standard --env mocha"
+    "lint": "bfx-lint-js --mocha",
+    "lint:fix": "bfx-lint-js --mocha --fix"
   },
   "dependencies": {
-    "@bitfinex/bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git",
-    "async": "3.2.4",
+    "@bitfinex/bfx-facs-base": "git+https://github.com/bitfinexcom/bfx-facs-base.git#v2.0.0",
+    "async": "^3.2.6",
     "better-sqlite3": "13.0.1"
   },
   "engines": {
@@ -30,18 +31,14 @@
     "Vladimir Voronkov <vsvoronkov@gmail.com>"
   ],
   "devDependencies": {
-    "chai": "^6.2.2",
-    "mocha": "^11.7.5",
-    "standard": "^17.1.2"
+    "@bitfinex/lint-js": "^1.1.0",
+    "chai": "6.3.0",
+    "mocha": "12.0.3"
   },
-  "standard": {
-    "globals": [
-      "describe",
-      "it",
-      "before",
-      "after",
-      "beforeEach",
-      "afterEach"
-    ]
+  "overrides": {
+    "mocha": {
+      "glob": "14.0.4",
+      "minimatch": "11.0.5"
+    }
   }
 }
